@@ -11,6 +11,7 @@ COL_STEP_NUM  = 33
 
 GAME_IDS = ["ce6457db", "914dcea1", "8b26c7cc"]
 
+#this is incorrect for the point calculation, its very very very complicated, so we may drop it but its good to have
 def label_game(raw: np.ndarray, game_id: str) -> pd.DataFrame:
     df = pd.DataFrame({
         "p0_score":  raw[:, COL_P0_SCORE]  * 1000,

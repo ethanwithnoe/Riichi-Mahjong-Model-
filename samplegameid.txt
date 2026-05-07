@@ -1,3 +1,8 @@
 ce6457db
 914dcea1
 8b26c7cc
+
+ce6457db
+  X  (CNN input) : (587, 1, 34, 15)   → ce6457db_matrices.npy
+  y  (labels)    : (587,)  → ce6457db_labels.npy
+  raw (all cols) : (587, 512) → ce6457db_raw.npy
