@@ -11,3 +11,8 @@
 - most negative step is the first step, 0 is the last or terminal action
 - 
 
+# Pipeline Discription
+- Randomly sample n games (all rounds all steps from data)
+- From those games find all the round wins from them
+
+

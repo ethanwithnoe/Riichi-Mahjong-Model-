@@ -9,7 +9,6 @@ COL_P3_SCORE  = 9
 COL_ROUND_NUM = 32
 COL_STEP_NUM  = 33
 
-GAME_IDS = ["ce6457db", "914dcea1", "8b26c7cc"]
 
 #this is incorrect for the point calculation, its very very very complicated, so we may drop it but its good to have
 def label_game(raw: np.ndarray, game_id: str) -> pd.DataFrame:
@@ -83,17 +82,13 @@ def label_game(raw: np.ndarray, game_id: str) -> pd.DataFrame:
 
 all_labels = []
 
-for gid in GAME_IDS:
-    path = f"{gid}_raw.npy"
-    if not os.path.exists(path):
-        print(f"[skip] {path} not found")
-        continue
+all_raw = np.load("data/all_raw.npy")
+game_index = pd.read_csv("data/game_index.csv")
 
-    raw = np.load(path)
-    print(f"\n{gid}:  {raw.shape[0]} moves loaded")
-
+for _, row in game_index.iterrows():
+    gid = row["game_id"]
+    raw = all_raw[int(row["start"]) : int(row["end"])]   # slice, no disk I/O
     labels = label_game(raw, gid)
-    print(labels.to_string(index=False))
     all_labels.append(labels)
 
 if all_labels:

@@ -2,4 +2,9 @@ datasets
 huggingface_hub
 python-dotenv
 numpy
+pandas
 matplotlib
+collections
+torch
+torchvision
+multiprocessing
