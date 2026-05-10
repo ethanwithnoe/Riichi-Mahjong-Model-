@@ -9,10 +9,9 @@ COL_P3_SCORE  = 9
 COL_ROUND_NUM = 32
 COL_STEP_NUM  = 33
 
-
-#this is incorrect for the point calculation, its very very very complicated, so we may drop it but its good to have
 def label_game(raw: np.ndarray, game_id: str) -> pd.DataFrame:
     df = pd.DataFrame({
+        "pov":       raw[:, 2].astype(int),
         "p0_score":  raw[:, COL_P0_SCORE],
         "p1_score":  raw[:, COL_P1_SCORE],
         "p2_score":  raw[:, COL_P2_SCORE],
@@ -21,80 +20,65 @@ def label_game(raw: np.ndarray, game_id: str) -> pd.DataFrame:
         "step_num":  raw[:, COL_STEP_NUM].astype(int),
     })
 
+    def get_fixed_scores(row):
+        """Unrotate POV-relative scores to fixed physical seat scores."""
+        pov  = int(row["pov"])
+        cols = [row["p0_score"], row["p1_score"], row["p2_score"], row["p3_score"]]
+        # fixed[seat] = cols[(seat - pov) % 4]
+        return [cols[(s - pov) % 4] for s in range(4)]
+
     round_starts = (
         df.sort_values(["round_num", "step_num"])
           .groupby("round_num")
           .first()
           .reset_index()
     )
+    round_starts["fixed"] = round_starts.apply(get_fixed_scores, axis=1)
 
-    # Get the very last row of the game as the final score endpoint
-    last_row = df.sort_values(["round_num", "step_num"]).iloc[-1]
-    final_scores = pd.Series({
-        "round_num": last_row["round_num"],
-        "p0_score":  last_row["p0_score"],
-        "p1_score":  last_row["p1_score"],
-        "p2_score":  last_row["p2_score"],
-        "p3_score":  last_row["p3_score"],
-    })
-
-    # Append final scores as the endpoint for the last round
-    round_endpoints = pd.concat(
-        [round_starts.iloc[1:], final_scores.to_frame().T],
-        ignore_index=True
-    )
+    # Use last row of game as final score endpoint
+    last_row   = df.sort_values(["round_num", "step_num"]).iloc[-1]
+    last_fixed = get_fixed_scores(last_row)
 
     results = []
 
     for i in range(len(round_starts)):
-        current  = round_starts.iloc[i]
-        endpoint = round_endpoints.iloc[i]
+        current     = round_starts.iloc[i]
+        pov_seat    = int(current["pov"])  # which physical seat is POV this round
+        start_fixed = current["fixed"]
 
-        start_scores = np.array([
-            current["p0_score"], current["p1_score"],
-            current["p2_score"], current["p3_score"]
-        ])
-        end_scores = np.array([
-            endpoint["p0_score"], endpoint["p1_score"],
-            endpoint["p2_score"], endpoint["p3_score"]
-        ])
-
-        deltas   = end_scores - start_scores
-        max_gain = int(deltas.max())
-
-        if max_gain <= 0:
-            results.append({
-                "game_id":    game_id,
-                "round_num":  int(current["round_num"]),
-                "winner":     -1,
-                "win_amount": 0,
-            })
+        if i + 1 < len(round_starts):
+            end_fixed = round_starts.iloc[i + 1]["fixed"]
         else:
-            results.append({
-                "game_id":    game_id,
-                "round_num":  int(current["round_num"]),
-                "winner":     int(np.argmax(deltas)),
-                "win_amount": max_gain,
-            })
+            end_fixed = last_fixed
+
+        # Track the POV player's score change using their fixed physical seat
+        delta   = end_fixed[pov_seat] - start_fixed[pov_seat]
+        pov_won = 1 if delta > 0 else 0
+
+        results.append({
+            "game_id":    game_id,
+            "round_num":  int(current["round_num"]),
+            "pov_won":    pov_won,
+            "win_amount": int(delta * 1000),
+        })
 
     return pd.DataFrame(results)
 
 
 all_labels = []
 
-all_raw = np.load("data/all_raw.npy")
+all_raw    = np.load("data/all_raw.npy")
 game_index = pd.read_csv("data/game_index.csv")
 
 for _, row in game_index.iterrows():
     gid = row["game_id"]
-    raw = all_raw[int(row["start"]) : int(row["end"])]   # slice, no disk I/O
+    raw = all_raw[int(row["start"]):int(row["end"])]
     labels = label_game(raw, gid)
     all_labels.append(labels)
 
 if all_labels:
     combined = pd.concat(all_labels, ignore_index=True)
-    combined.to_csv("win_labels.csv", index=False)
+    combined.to_csv("data/win_labels.csv", index=False)
     print(f"\nSaved win_labels.csv  ({len(combined)} rounds total)")
     print("\nWinner distribution:")
-    print(combined["winner"].value_counts().sort_index().to_string())
-
+    print(combined["pov_won"].value_counts().sort_index().to_string())
