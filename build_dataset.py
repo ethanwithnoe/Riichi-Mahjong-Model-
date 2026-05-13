@@ -13,22 +13,22 @@ import pandas as pd
 # column indices --------------------------------------
 COL_HAND_START = 68
 COL_POOL_START = 238
-COL_DISCARD = 510 # not used for X here, but here for reference
-COL_GAME_ID = 511
-COL_ROUND_NUM = 32
-COL_STEP_NUM = 33
+COL_DISCARD    = 510        # not used for X here, but here for reference
+COL_GAME_ID    = 511
+COL_ROUND_NUM  = 32
+COL_STEP_NUM   = 33
 
-COL_P0_SCORE = 6
-COL_P1_SCORE = 7
-COL_P2_SCORE = 8
-COL_P3_SCORE = 9
+COL_P0_SCORE   = 6
+COL_P1_SCORE   = 7
+COL_P2_SCORE   = 8
+COL_P3_SCORE   = 9
 
-N_RAW_COLS = 512 # total columns in the raw dataset (0–511)
+N_RAW_COLS     = 512        # total columns in the raw dataset (0–511)
 
 # defaults -------------------
-DEFAULT_K_GAMES = 500
+DEFAULT_K_GAMES  = 500
 DEFAULT_SAVE_DIR = Path(__file__).resolve().parent / "data"
-DEFAULT_SEED = 42
+DEFAULT_SEED     = 42
 
 
 # STEP 1 - LOADING RAW DATA ----------------------------------------------
@@ -41,7 +41,7 @@ def load_raw(k_games: int, save_dir: Path, seed: int):
     # if exist, load from disc cuz goated
     if raw_path.exists() and index_path.exists():
         print(f"[load] found cached data in {save_dir}, loading")
-        all_raw = np.load(raw_path)
+        all_raw    = np.load(raw_path)
         game_index = pd.read_csv(index_path)
         return all_raw, game_index
 
@@ -100,7 +100,7 @@ def load_raw(k_games: int, save_dir: Path, seed: int):
         if i % 50 == 0 or i == k_games:
             print(f"  [{i}/{k_games}] processed {cursor:,} moves so far")
 
-    all_raw = np.concatenate(chunks, axis=0)
+    all_raw    = np.concatenate(chunks, axis=0)
     game_index = pd.DataFrame(index)
 
     np.save(raw_path, all_raw)
@@ -186,7 +186,7 @@ def label_game(raw: np.ndarray, game_id: str) -> pd.DataFrame:
     round_starts["fixed"] = round_starts.apply(get_fixed_scores, axis=1)
 
     # for the last round, theres no next round to compare it to, we set this as the endpoint
-    last_row = df.sort_values(["round_num", "step_num"]).iloc[-1]
+    last_row   = df.sort_values(["round_num", "step_num"]).iloc[-1]
     last_fixed = get_fixed_scores(last_row)
 
     results = []
@@ -198,7 +198,7 @@ def label_game(raw: np.ndarray, game_id: str) -> pd.DataFrame:
 
         # did the pov player's score go up?
         # look at their seat position to decide start/end array
-        delta = end_fixed[pov_seat] - start_fixed[pov_seat]
+        delta   = end_fixed[pov_seat] - start_fixed[pov_seat]
         pov_won = 1 if delta > 0 else 0 # 1 = win, 0 = lose/even
 
         results.append({
@@ -267,10 +267,10 @@ def build_dataset(k_games: int, save_dir: Path, seed: int):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="build X.npy and y.npy for the mahjong win predictor.")
-    parser.add_argument("--k_games", type=int, default=DEFAULT_K_GAMES, help="Number of games to sample (default: 500)")
-    parser.add_argument("--save_dir", type=str, default=str(DEFAULT_SAVE_DIR), help="Output directory (default: ./data)")
-    parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="Random seed (default: 42)")
+    parser = argparse.ArgumentParser(description="Build X.npy and y.npy for the Mahjong win predictor.")
+    parser.add_argument("--k_games",  type=int, default=DEFAULT_K_GAMES,        help="Number of games to sample (default: 500)")
+    parser.add_argument("--save_dir", type=str, default=str(DEFAULT_SAVE_DIR),   help="Output directory (default: ./data)")
+    parser.add_argument("--seed",     type=int, default=DEFAULT_SEED,            help="Random seed (default: 42)")
     args = parser.parse_args()
 
     build_dataset(
