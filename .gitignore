@@ -217,3 +217,7 @@ __marimo__/
 
 #for the data folder
 ./data
+
+
+*.npy
+*.pth
